@@ -26,7 +26,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <cstdlib>
-
+#include <optional>
 
 /**
  * \mainpage
@@ -65,7 +65,25 @@
  */
 
 
-
+namespace {
+    [[nodiscard]] inline std::optional<std::string> get_env(const char* name) {
+#ifdef _WIN32
+        char* buf = nullptr;
+        size_t size = 0;
+        if (_dupenv_s(&buf, &size, name) == 0 && buf != nullptr) {
+            std::string result(buf);
+            free(buf);
+            return result;
+        }
+        return std::nullopt;
+#else
+        if (auto* val = std::getenv(name)) {
+            return std::string(val);
+        }
+        return std::nullopt;
+#endif
+    }
+}
 
 //! The namespace within which all functionality is placed
 namespace TG {
@@ -131,12 +149,12 @@ namespace TG {
    * ```
    * \sa TG::Clear
    */
-  constexpr std::string Home = "\033[H";
+  constexpr std::string_view Home = "\033[H";
 
   //! VT100 code to clear the screen
    /** \sa TG::Home
    */
-  constexpr std::string Clear = "\033[2J";
+  constexpr std::string_view Clear = "\033[2J";
 
   //! A simple class to hold a 2D image using datatype specified as `ValueType` template parameter
   template <typename ValueType>
@@ -392,7 +410,7 @@ namespace TG {
        * See main class description for an explanation of the remaining
        * arguments.
        */
-      Plot& add_text (const std::string& text, float x, float y,
+      Plot& add_text (std::string_view text, float x, float y,
           float anchor_x = 0.5, float anchor_y = 0.5, int colour_index = 1);
 
       //! set the range along the x-axis
@@ -652,6 +670,8 @@ namespace TG {
     {
       int repeats = 0;
       std::stringstream out;
+      // Reserve worst case: each pixel needs up to 5 chars ("!255" + value)
+      out.str().reserve(x_dim * 5);
       ctype current = std::numeric_limits<ctype>::max();
 
       for (int x = 0; x < x_dim; ++x) {
@@ -683,6 +703,9 @@ namespace TG {
       inline std::string encode (const ImageType& im, int cmap_size, int y0)
       {
         std::string out;
+        // Reserve worst case: each intensity might need a row
+        // Each row might need: "#" + intensity + "$" + encoded_row + "-"
+        out.reserve(cmap_size * (2 + im.width() * 5));
         const int nsixels = std::min (im.height()-y0, 6);
 
         bool first = true;
@@ -783,7 +806,7 @@ namespace TG {
     margin_y = 2*font.height();
     reset();
 
-    if (std::getenv("WHITEBG") != nullptr)
+    if (get_env("WHITEBG").has_value())
       for (auto& x : cmap)
         for (auto& c : x)
           c = 100-c;
@@ -947,7 +970,7 @@ namespace TG {
 
 
 
-  Plot& Plot::add_text (const std::string& text, float x, float y,
+  Plot& Plot::add_text (std::string_view text, float x, float y,
       float anchor_x, float anchor_y, int colour_index)
   {
     auto f = Font::get_font();
