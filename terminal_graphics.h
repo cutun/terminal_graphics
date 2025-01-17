@@ -190,7 +190,7 @@ namespace TG {
    * clamping the values to the [ min max ] range.
    */
   template <class ImageType>
-    class Rescale {
+    class Rescale { 
       public:
         Rescale (const ImageType& image, double minval, double maxval, int cmap_size);
 
@@ -204,6 +204,49 @@ namespace TG {
         const int cmap_size;
     };
 
+
+
+/**
+ * Simple rotation where it would able to rotate the image by 90, 180, or 270 degree counter clockwise based on what user call
+ */
+
+enum ANGLE 
+{
+  D_90 = 0,
+  D_180,
+  D_270
+};
+  template <class ImageType>
+  class Rotate_90 {
+    public:
+        Rotate_90(const ImageType& image, ANGLE angle)
+            : im(image), _angle(angle) {}
+
+        int width() const {
+            return (_angle == D_90 || _angle == D_270) ? im.height() : im.width();
+        }
+
+        int height() const {
+            return (_angle == D_90 || _angle == D_270) ? im.width() : im.height();
+        }
+
+        auto operator()(int x, int y) const {
+            switch (_angle) {
+              case D_90:
+                return im(y, width() - x - 1);
+              case D_180:
+                return im(width() - x - 1, height() - y - 1);
+              case D_270:
+                return im(height() - y - 1, x);
+              default:
+                throw std::invalid_argument("Invalid angle specified");
+            }
+        }
+
+    private:
+        const ImageType& im;
+        const ANGLE _angle;
+    };
 
 
   //! Adapter class to magnify an image

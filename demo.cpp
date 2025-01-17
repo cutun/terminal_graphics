@@ -23,6 +23,8 @@ int main (int argc, char* argv[])
 
     std::cout << "Same image magnified by a factor of 2:\n";
     TG::imshow (TG::magnify (image, 2), 0, 255);
+ // ToDO: TG::imshow(TG::Rotate (image, TG::AN))
+    TG::imshow(TG::Rotate_90(image, TG::ANGLE::D_180), 0, 255);
 
 
     // demonstate use of TG::plot():
