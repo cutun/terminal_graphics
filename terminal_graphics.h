@@ -248,6 +248,36 @@ enum ANGLE
         const ANGLE _angle;
     };
 
+  /**
+  function to calculate histogram for any numeric data type
+   */
+
+template <typename T>
+constexpr auto histogramize = [](const TG::Image<T>& image, int bins = 256) {
+    std::vector<int> histogram(bins, 0);
+
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            T pixel_value = image(x, y);
+            if (pixel_value >= 0 && pixel_value < bins) {
+                histogram[static_cast<int>(pixel_value)]++;
+            }
+        }
+    }
+
+    return histogram;
+};
+
+/** 
+return normalized histogram data for external plotting
+*/
+template <typename T>
+std::vector<int> get_histogram_data(const TG::Image<T>& image, int bins = 256) {
+    auto histogram = histogramize<T>(image, bins);
+    return std::vector<int>(histogram.begin() + 1, histogram.begin() + bins - 1);
+}
+
+
 
   //! Adapter class to magnify an image
   /**
