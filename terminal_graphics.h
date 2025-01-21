@@ -210,72 +210,94 @@ namespace TG {
  * Simple rotation where it would able to rotate the image by 90, 180, or 270 degree counter clockwise based on what user call
  */
 
-enum ANGLE 
-{
-  D_90 = 0,
-  D_180,
-  D_270
-};
+  enum ANGLE 
+  {
+    D_90 = 0,
+    D_180,
+    D_270
+  };
   template <class ImageType>
   class Rotate_90 {
     public:
-        Rotate_90(const ImageType& image, ANGLE angle)
-            : im(image), _angle(angle) {}
+      Rotate_90(const ImageType& image, ANGLE angle)
+        : im(image), _angle(angle) {}
 
-        int width() const {
-            return (_angle == D_90 || _angle == D_270) ? im.height() : im.width();
+      int width() const {
+        return (_angle == D_90 || _angle == D_270) ? im.height() : im.width();
+      }
+
+      int height() const {
+        return (_angle == D_90 || _angle == D_270) ? im.width() : im.height();
+      }
+
+      auto operator()(int x, int y) const {
+        switch (_angle) {
+          case D_90:
+            return im(y, width() - x - 1);
+          case D_180:
+            return im(width() - x - 1, height() - y - 1);
+          case D_270:
+            return im(height() - y - 1, x);
+          default:
+            throw std::invalid_argument("Invalid angle specified");
         }
+      }
 
-        int height() const {
-            return (_angle == D_90 || _angle == D_270) ? im.width() : im.height();
-        }
-
-        auto operator()(int x, int y) const {
-            switch (_angle) {
-              case D_90:
-                return im(y, width() - x - 1);
-              case D_180:
-                return im(width() - x - 1, height() - y - 1);
-              case D_270:
-                return im(height() - y - 1, x);
-              default:
-                throw std::invalid_argument("Invalid angle specified");
-            }
-        }
-
-    private:
+      private:
         const ImageType& im;
         const ANGLE _angle;
-    };
+  };
+
+  // determine the number of bins dynamically based on type T
+  constexpr auto bins = []<typename T>() -> auto {
+    if constexpr (std::is_floating_point_v<T>) {
+      return static_cast<T>(256);
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return static_cast<T>(2);
+    } else if constexpr (std::is_integral_v<T>) {
+      return std::numeric_limits<T>::max() - std::numeric_limits<T>::min() + 1;
+    } else { // just in case i putted it here
+      static_assert(std::is_arithmetic_v<T>, "Unsupported data type for histogram.");
+      return T{};
+    }
+  };
 
   /**
-  function to calculate histogram for any numeric data type
+   * function to calculate histogram for any numeric data type
    */
-
-template <typename T>
-constexpr auto histogramize = [](const TG::Image<T>& image, int bins = 256) {
-    std::vector<int> histogram(bins, 0);
+  template <typename T>
+  constexpr auto histogramize = [](const TG::Image<T>& image) {
+    constexpr auto bin_count = bins.template operator()<T>();
+    std::vector<int> histogram(bin_count, 0);
 
     for (int y = 0; y < image.height(); ++y) {
-        for (int x = 0; x < image.width(); ++x) {
-            T pixel_value = image(x, y);
-            if (pixel_value >= 0 && pixel_value < bins) {
-                histogram[static_cast<int>(pixel_value)]++;
-            }
+      for (int x = 0; x < image.width(); ++x) {
+        T pixel_value = image(x, y);
+        if constexpr (std::is_floating_point_v<T>) {
+          int index = static_cast<int>(std::round(pixel_value * (bin_count - 1)));
+          index = std::clamp(index, 0, bin_count - 1);
+          histogram[index]++;
+        } else {
+          if (pixel_value >= std::numeric_limits<T>::min() && pixel_value <= std::numeric_limits<T>::max()) {
+            histogram[static_cast<int>(pixel_value) - std::numeric_limits<T>::min()]++;
+          }
         }
+      }
     }
-
     return histogram;
-};
+  };
 
-/** 
-return normalized histogram data for external plotting
-*/
-template <typename T>
-std::vector<int> get_histogram_data(const TG::Image<T>& image, int bins = 256) {
-    auto histogram = histogramize<T>(image, bins);
-    return std::vector<int>(histogram.begin() + 1, histogram.begin() + bins - 1);
-}
+  // get histogram data
+  template <typename T>
+  std::vector<int> get_histogram_data(const TG::Image<T>& image) {
+    constexpr auto bin_count = bins.template operator()<T>();
+    auto histogram = histogramize<T>(image);
+
+    if (bin_count > 2) {
+      return std::vector<int>(histogram.begin() + 1, histogram.end() - 1);
+    }
+    return histogram;
+  }
 
 
 
