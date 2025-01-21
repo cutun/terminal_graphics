@@ -68,22 +68,46 @@ int main (int argc, char* argv[])
 
   int max_value = *std::max_element(histogram_data.begin(), histogram_data.end());
 
-  std::cout << "Plotting the histogram of pixel values as a bar plot:\n";
-
   auto plot = TG::plot(768, 256)
                   .set_xlim(1, 255)
                   .set_ylim(0, max_value);
 
   for (int i = 0; i < static_cast<int>(histogram_data.size()); ++i) {
-      float x = 1 + i; 
-      float y = static_cast<float>(histogram_data[i]);
+    float x = 1 + i; 
+    float y = static_cast<float>(histogram_data[i]);
 
-      // non-zero
-      if (y > 0) {
-          plot.add_line(static_cast<float>(x), 0.0f, static_cast<float>(x), y, 2);
-      }
+    // non-zero
+    if (y > 0) {
+      plot.add_line(static_cast<float>(x), 0.0f, static_cast<float>(x), y, 2);
+    }
   }
 
+
+  auto image_char = load_pgm(image_filename);
+  auto image_short = TG::convert_image_to_unsigned_short(image_char);
+
+  // check if the conversion was successful
+  // bool success = true;
+  // for (int y = 0; y < image_char.height(); ++y) {
+  //     for (int x = 0; x < image_char.width(); ++x) {
+  //         if (static_cast<unsigned short>(image_char(x, y)) != image_short(x, y)) {
+  //             std::cerr << "Conversion failed at (" << x << ", " << y << ")\n";
+  //             success = false;
+  //             break;
+  //         }
+  //     }
+  // }
+  // if (success) {
+  //     std::cout << "successful!\n";
+  // } else {
+  //     std::cerr << "Failed.\n";
+  // }
+
+  std::cout << "Displaying original image:\n";
+  TG::imshow(image_char, 0, 255);
+
+  std::cout << "Displaying converted image:\n";
+  TG::imshow(image_short, 0, 255);
 
 
     // demonstate use of TG::plot():

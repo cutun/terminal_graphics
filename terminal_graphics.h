@@ -204,8 +204,19 @@ namespace TG {
         const int cmap_size;
     };
 
+// if input in unsigned char but the output should be unsignged short
+// call funciton manipulate in the pixel 
+  //convert an image from unsigned char to unsigned short
+  inline TG::Image<unsigned short> convert_image_to_unsigned_short(const TG::Image<unsigned char>& input_image) {
+    TG::Image<unsigned short> output_image(input_image.width(), input_image.height());
 
-
+    for (int y = 0; y < input_image.height(); ++y) {
+      for (int x = 0; x < input_image.width(); ++x) {
+        output_image(x, y) = static_cast<unsigned short>(input_image(x, y));
+      }
+    }
+    return output_image;
+  }
 /**
  * Simple rotation where it would able to rotate the image by 90, 180, or 270 degree counter clockwise based on what user call
  */
@@ -248,26 +259,24 @@ namespace TG {
         const ANGLE _angle;
   };
 
-  // determine the number of bins dynamically based on type T
-  constexpr auto bins = []<typename T>() -> auto {
-    if constexpr (std::is_floating_point_v<T>) {
-      return static_cast<T>(256);
-    } else if constexpr (std::is_same_v<T, bool>) {
-      return static_cast<T>(2);
-    } else if constexpr (std::is_integral_v<T>) {
-      return std::numeric_limits<T>::max() - std::numeric_limits<T>::min() + 1;
-    } else { // just in case i putted it here
-      static_assert(std::is_arithmetic_v<T>, "Unsupported data type for histogram.");
-      return T{};
-    }
-  };
-
-  /**
-   * function to calculate histogram for any numeric data type
+   /**
+   * Function to calculate histogram for any numeric data type
    */
   template <typename T>
-  constexpr auto histogramize = [](const TG::Image<T>& image) {
-    constexpr auto bin_count = bins.template operator()<T>();
+  auto histogramize = [](const TG::Image<T>& image) {
+    constexpr auto bin_count = []() -> auto {
+      if constexpr (std::is_floating_point_v<T>) {
+        return static_cast<T>(256);
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return static_cast<T>(2);
+      } else if constexpr (std::is_integral_v<T>) {
+        return std::numeric_limits<T>::max() - std::numeric_limits<T>::min() + 1;
+      } else {
+        static_assert(std::is_arithmetic_v<T>, "Unsupported data type for histogram.");
+        return T{};
+      }
+    }();
+
     std::vector<int> histogram(bin_count, 0);
 
     for (int y = 0; y < image.height(); ++y) {
@@ -287,17 +296,19 @@ namespace TG {
     return histogram;
   };
 
-  // get histogram data
+  // Get histogram data
   template <typename T>
   std::vector<int> get_histogram_data(const TG::Image<T>& image) {
-    constexpr auto bin_count = bins.template operator()<T>();
     auto histogram = histogramize<T>(image);
+    auto bin_count = histogram.size();
 
     if (bin_count > 2) {
       return std::vector<int>(histogram.begin() + 1, histogram.end() - 1);
     }
     return histogram;
   }
+
+
 
 
 
