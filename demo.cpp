@@ -86,28 +86,13 @@ int main (int argc, char* argv[])
   auto image_char = load_pgm(image_filename);
   auto image_short = TG::convert_image_to_unsigned_short(image_char);
 
-  // check if the conversion was successful
-  // bool success = true;
-  // for (int y = 0; y < image_char.height(); ++y) {
-  //     for (int x = 0; x < image_char.width(); ++x) {
-  //         if (static_cast<unsigned short>(image_char(x, y)) != image_short(x, y)) {
-  //             std::cerr << "Conversion failed at (" << x << ", " << y << ")\n";
-  //             success = false;
-  //             break;
-  //         }
-  //     }
-  // }
-  // if (success) {
-  //     std::cout << "successful!\n";
-  // } else {
-  //     std::cerr << "Failed.\n";
-  // }
 
   std::cout << "Displaying original image:\n";
   TG::imshow(image_char, 0, 255);
 
   std::cout << "Displaying converted image:\n";
-  TG::imshow(image_short, 0, 255);
+  TG::imshow(image_short, 0, 65535);
+
 
 
     // demonstate use of TG::plot():

@@ -198,25 +198,49 @@ namespace TG {
         int height () const;
         ctype operator() (int x, int y) const;
 
+        unsigned short getUShortValue(int x, int y) const;
+
       private:
         const ImageType& im;
         const double min, max;
         const int cmap_size;
     };
 
+  template <class ImageType>
+  inline unsigned short Rescale<ImageType>::getUShortValue(int x, int y) const {
+    return static_cast<unsigned short>((im(x,y) - min) / (max - min));
+  }
+
+
+
+
 // if input in unsigned char but the output should be unsignged short
 // call funciton manipulate in the pixel 
-  //convert an image from unsigned char to unsigned short
-  inline TG::Image<unsigned short> convert_image_to_unsigned_short(const TG::Image<unsigned char>& input_image) {
-    TG::Image<unsigned short> output_image(input_image.width(), input_image.height());
+inline TG::Image<unsigned short> convert_image_to_unsigned_short(
+  const TG::Image<unsigned char>& input_image) {
+    // set up a rescale adapter to map [0..255] → [0..65535].
+    TG::Rescale<TG::Image<unsigned char>> rescaler(
+      input_image,
+      0.0, //minval
+      255.0, //maxval
+      65536 //cmap size
+    );
+
+    TG::Image<unsigned short> output(
+      input_image.width(),
+      input_image.height()
+    );
+
 
     for (int y = 0; y < input_image.height(); ++y) {
       for (int x = 0; x < input_image.width(); ++x) {
-        output_image(x, y) = static_cast<unsigned short>(input_image(x, y));
+        output(x, y) = rescaler.getUShortValue(x, y);
       }
     }
-    return output_image;
-  }
+    return output;
+}
+
+
 /**
  * Simple rotation where it would able to rotate the image by 90, 180, or 270 degree counter clockwise based on what user call
  */
