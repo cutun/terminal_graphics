@@ -84,7 +84,8 @@ int main (int argc, char* argv[])
 
 
   auto image_char = load_pgm(image_filename);
-  auto image_short = TG::convert_image_to_unsigned_short(image_char);
+  auto image_short = TG::convert_image_to_unsigned_short<unsigned char, unsigned short>(image_char);
+
 
 
   std::cout << "Displaying original image:\n";

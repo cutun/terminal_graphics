@@ -206,39 +206,54 @@ namespace TG {
         const int cmap_size;
     };
 
+  // template <class ImageType>
+  // inline unsigned short Rescale<ImageType>::getUShortValue(int x, int y) const {
+  //   return static_cast<unsigned short>((im(x,y) - min) / (max - min));
+  // }
+
   template <class ImageType>
   inline unsigned short Rescale<ImageType>::getUShortValue(int x, int y) const {
-    return static_cast<unsigned short>((im(x,y) - min) / (max - min));
+    constexpr unsigned short targetMin = std::numeric_limits<unsigned short>::min();
+    constexpr unsigned short targetMax = std::numeric_limits<unsigned short>::max();
+    const double sourceRange = static_cast<double>(max) - min;
+    const double targetRange = static_cast<double>(targetMax) - targetMin;
+    auto targetValue = std::round((im(x, y) - min) * (targetRange / sourceRange) + targetMin);
+      
+    return static_cast<unsigned short>(targetValue);
   }
 
 
-
-
-// if input in unsigned char but the output should be unsignged short
-// call funciton manipulate in the pixel 
-inline TG::Image<unsigned short> convert_image_to_unsigned_short(
-  const TG::Image<unsigned char>& input_image) {
-    // set up a rescale adapter to map [0..255] → [0..65535].
-    TG::Rescale<TG::Image<unsigned char>> rescaler(
-      input_image,
-      0.0, //minval
-      255.0, //maxval
-      65536 //cmap size
-    );
-
-    TG::Image<unsigned short> output(
-      input_image.width(),
-      input_image.height()
-    );
-
+  // if input in unsigned char but the output should be unsignged short
+  // call funciton manipulate in the pixel 
+  template <typename SourceType, typename TargetType>
+  TG::Image<TargetType> convert_image_to_unsigned_short(const TG::Image<SourceType>& input_image) {
+    SourceType min_val = std::numeric_limits<SourceType>::max();
+    SourceType max_val = std::numeric_limits<SourceType>::min();
 
     for (int y = 0; y < input_image.height(); ++y) {
       for (int x = 0; x < input_image.width(); ++x) {
-        output(x, y) = rescaler.getUShortValue(x, y);
+        SourceType pixel = input_image(x, y);
+        if (pixel < min_val) min_val = pixel;
+        if (pixel > max_val) max_val = pixel;
+      }
+    }
+
+    constexpr TargetType targetMin = std::numeric_limits<TargetType>::min();
+    constexpr TargetType targetMax = std::numeric_limits<TargetType>::max();
+    const double sourceRange = static_cast<double>(max_val) - min_val;
+    const double targetRange = static_cast<double>(targetMax) - targetMin;
+
+    TG::Image<TargetType> output(input_image.width(), input_image.height());
+
+    for (int y = 0; y < input_image.height(); ++y) {
+      for (int x = 0; x < input_image.width(); ++x) {
+        auto targetValue = std::round((input_image(x, y) - min_val) * (targetRange / sourceRange) + targetMin);
+        output(x, y) = static_cast<TargetType>(targetValue);
       }
     }
     return output;
-}
+  }
+
 
 
 /**
