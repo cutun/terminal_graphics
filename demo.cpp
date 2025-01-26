@@ -64,38 +64,41 @@ int main (int argc, char* argv[])
     TG::imshow(TG::Rotate_90(image, TG::ANGLE::D_180), 0, 255);
 
 
-  const auto histogram_data = TG::get_histogram_data(image);
+    const auto histogram_data = TG::get_histogram_data(image);
 
-  int max_value = *std::max_element(histogram_data.begin(), histogram_data.end());
+    int max_value = *std::max_element(histogram_data.begin(), histogram_data.end());
 
-  auto plot = TG::plot(768, 256)
-                  .set_xlim(1, 255)
-                  .set_ylim(0, max_value);
+    auto plot = TG::plot(768, 256)
+                    .set_xlim(1, 255)
+                    .set_ylim(0, max_value);
 
-  for (int i = 0; i < static_cast<int>(histogram_data.size()); ++i) {
-    float x = 1 + i; 
-    float y = static_cast<float>(histogram_data[i]);
+    for (int i = 0; i < static_cast<int>(histogram_data.size()); ++i) {
+      float x = 1 + i; 
+      float y = static_cast<float>(histogram_data[i]);
 
-    // non-zero
-    if (y > 0) {
-      plot.add_line(static_cast<float>(x), 0.0f, static_cast<float>(x), y, 2);
+      // non-zero
+      if (y > 0) {
+        plot.add_line(static_cast<float>(x), 0.0f, static_cast<float>(x), y, 2);
+      }
     }
-  }
 
 
-  auto image_char = load_pgm(image_filename);
-  auto image_short = TG::convert_image_to_unsigned_short<unsigned char, unsigned short>(image_char);
-
-
-
-  std::cout << "Displaying original image:\n";
-  TG::imshow(image_char, 0, 255);
-
-  std::cout << "Displaying converted image:\n";
-  TG::imshow(image_short, 0, 65535);
+    auto image_char = load_pgm(image_filename);
+    auto image_short = TG::convert_image_to_unsigned_short<unsigned char, unsigned short>(image_char);
 
 
 
+    std::cout << "Displaying original image:\n";
+    TG::imshow(image_char, 0, 255);
+
+    std::cout << "Displaying converted image:\n";
+    TG::imshow(image_short, 0, 65535);
+
+    int block_size = 35;
+    auto binary_image = TG::adaptive_threshold_blockwise(image_char, block_size);
+
+    std::cout << "Displaying binary thresholded image:\n";
+    TG::imshow(binary_image, 0, 255);
     // demonstate use of TG::plot():
 
     std::vector<float> x (50);

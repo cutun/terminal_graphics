@@ -347,7 +347,76 @@ namespace TG {
     return histogram;
   }
 
+    /**
+  * Compute threshold based on a given histogram.
+  */
+  template <typename T>
+  int compute_otsu_threshold(const std::vector<int>& histogram, int total) {
+    std::vector<double> prob(histogram.size(), 0.0);
+    for (size_t i = 0; i < histogram.size(); ++i) {
+      prob[i] = static_cast<double>(histogram[i]) / total;
+    }
 
+    double sum = 0.0;
+    for (size_t i = 0; i < histogram.size(); ++i) {
+      sum += i * prob[i];
+    }
+
+    double sumB = 0.0, wB = 0.0, wF = 0.0;
+    double max_variance = 0.0;
+    int threshold = 0;
+
+    for (size_t t = 0; t < histogram.size(); ++t) {
+      wB += prob[t];
+      if (wB == 0) continue;
+      wF = 1.0 - wB;
+      if (wF == 0) break;
+
+      sumB += t * prob[t];
+      double meanB = sumB / wB;
+      double meanF = (sum - sumB) / wF;
+
+      double varBetween = wB * wF * std::pow(meanB - meanF, 2);
+      if (varBetween > max_variance) {
+        max_variance = varBetween;
+        threshold = t;
+      }
+    }
+
+    return threshold;
+  }
+
+  /**
+  * Apply adaptive thresholding using block-wise 
+  */
+  template <typename T>
+  TG::Image<unsigned char> adaptive_threshold_blockwise(const TG::Image<T>& image, int block_size) {
+    TG::Image<unsigned char> binary_image(image.width(), image.height());
+
+    int half_block = block_size / 2;
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        int x1 = std::max(x - half_block, 0);
+        int y1 = std::max(y - half_block, 0);
+        int x2 = std::min(x + half_block, image.width() - 1);
+        int y2 = std::min(y + half_block, image.height() - 1);
+
+        std::vector<int> local_hist(256, 0);
+        int count = 0;
+        for (int j = y1; j <= y2; ++j) {
+          for (int i = x1; i <= x2; ++i) {
+            local_hist[image(i, j)]++;
+            count++;
+          }
+        }
+
+        int local_threshold = compute_otsu_threshold<T>(local_hist, count);
+
+        binary_image(x, y) = (image(x, y) > local_threshold) ? 255 : 0;
+      }
+    }
+    return binary_image;
+  }
 
 
 
