@@ -11,7 +11,14 @@
 
 #ifndef __TERMINAL_GRAPHICS_H__
 #define __TERMINAL_GRAPHICS_H__
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES  
+#endif
+#include <cmath>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846  
+#endif
 
 #include <iostream>
 #include <string>
@@ -418,7 +425,55 @@ namespace TG {
     return binary_image;
   }
 
+  /**
+ * Applies a Gaussian filter to an image.
+ * The filter smooths the image using a Gaussian kernel of a given size and sigma.
+ */
+  template <typename T>
+  TG::Image<T> apply_gaussian_filter(const TG::Image<T>& image, int kernel_size, double sigma) {
+    if (kernel_size % 2 == 0) {
+      throw std::invalid_argument("Kernel size must be odd.");
+    }
 
+    int half_size = kernel_size / 2;
+    std::vector<std::vector<double>> kernel(kernel_size, std::vector<double>(kernel_size));
+    double sum = 0.0;
+
+    // kernel
+    for (int y = -half_size; y <= half_size; ++y) {
+      for (int x = -half_size; x <= half_size; ++x) {
+        kernel[y + half_size][x + half_size] = 
+        std::exp(-(x * x + y * y) / (2 * sigma * sigma)) / (2 * M_PI * sigma * sigma);
+        sum += kernel[y + half_size][x + half_size];
+      }
+    }
+
+    // normalize
+    for (auto& row : kernel) {
+      for (double& val : row) {
+        val /= sum;
+      }
+    }
+
+    TG::Image<T> filtered_image(image.width(), image.height());
+
+    // convolution
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        double new_value = 0.0;
+        for (int ky = -half_size; ky <= half_size; ++ky) {
+          for (int kx = -half_size; kx <= half_size; ++kx) {
+            int img_x = std::clamp(x + kx, 0, image.width() - 1);
+            int img_y = std::clamp(y + ky, 0, image.height() - 1);
+            new_value += image(img_x, img_y) * kernel[ky + half_size][kx + half_size];
+          }
+        }
+        filtered_image(x, y) = static_cast<T>(std::round(new_value));
+      }
+    }
+
+    return filtered_image;
+  }
 
   //! Adapter class to magnify an image
   /**
@@ -457,7 +512,7 @@ namespace TG {
    * documentation for ColourMap for details.
    */
   template <class ImageType>
-    void imshow (const ImageType& image, const ColourMap& cmap); 
+    void imshow (const ImageType& image, const ColourMap& cmap);
 
 
   //! Display a scalar image to the terminal, rescaled between (min, max)

@@ -100,6 +100,12 @@ int main (int argc, char* argv[])
     std::cout << "Displaying binary thresholded image:\n";
     TG::imshow(binary_image, 0, 255);
     // demonstate use of TG::plot():
+    int kernel_size = 5; // Must be odd
+    double sigma = 1.0;
+    auto smoothed_image = TG::apply_gaussian_filter(image, kernel_size, sigma);
+
+    std::cout << "Displaying Gaussian filtered image:\n";
+    TG::imshow(smoothed_image, 0, 255);
 
     std::vector<float> x (50);
     std::vector<float> y (50);
