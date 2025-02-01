@@ -457,7 +457,7 @@ namespace TG {
    * documentation for ColourMap for details.
    */
   template <class ImageType>
-    void imshow (const ImageType& image, const ColourMap& cmap);
+    void imshow (const ImageType& image, const ColourMap& cmap); 
 
 
   //! Display a scalar image to the terminal, rescaled between (min, max)
