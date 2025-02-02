@@ -475,6 +475,75 @@ namespace TG {
     return filtered_image;
   }
 
+
+  enum class PaddingType {
+    ZERO,       // Pad with zeros
+    REPLICATE,  // Replicate edge pixels
+    REFLECT,    // Reflect image at boundaries
+    CIRCULAR    // Wrap around the image
+  };
+
+  /**
+  * Applies convolution to an image using a specified kernel and padding type.
+  */
+  template <typename T>
+  TG::Image<T> convolve(const TG::Image<T>& input, const std::vector<std::vector<float>>& kernel, PaddingType padding_type = PaddingType::ZERO) {
+    int kernel_size = kernel.size();
+    if (kernel_size % 2 == 0) {
+      throw std::invalid_argument("Kernel size must be odd.");
+    }
+
+    int pad = kernel_size / 2;
+    int width = input.width();
+    int height = input.height();
+
+    TG::Image<T> output(width, height);
+
+    auto get_padded_pixel = [&](int x, int y) -> T {
+      if (x >= 0 && x < width && y >= 0 && y < height) {
+        return input(x, y);  
+      }
+
+      switch (padding_type) {
+        case PaddingType::ZERO:
+          return 0;  
+        case PaddingType::REPLICATE:
+          x = std::clamp(x, 0, width - 1);
+          y = std::clamp(y, 0, height - 1);
+          return input(x, y); 
+        case PaddingType::REFLECT:
+          x = std::abs(x) % (2 * width);
+          y = std::abs(y) % (2 * height);
+          if (x >= width) x = 2 * width - 1 - x;
+          if (y >= height) y = 2 * height - 1 - y;
+          return input(x, y); 
+        case PaddingType::CIRCULAR:
+          x = (x + width) % width;
+          y = (y + height) % height;
+          return input(x, y); 
+        default:
+          throw std::invalid_argument("Invalid padding type.");
+      }
+    };
+
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        float sum = 0.0f;
+        for (int ky = -pad; ky <= pad; ++ky) {
+          for (int kx = -pad; kx <= pad; ++kx) {
+            int img_x = x + kx;
+            int img_y = y + ky;
+            T pixel_value = get_padded_pixel(img_x, img_y);
+            sum += pixel_value * kernel[ky + pad][kx + pad];
+          }
+        }
+        output(x, y) = static_cast<T>(std::round(sum));
+      }
+    }
+
+    return output;
+  }
+
   //! Adapter class to magnify an image
   /**
    * This makes the image `factor` bigger than the original.

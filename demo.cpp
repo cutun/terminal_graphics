@@ -107,6 +107,21 @@ int main (int argc, char* argv[])
     std::cout << "Displaying Gaussian filtered image:\n";
     TG::imshow(smoothed_image, 0, 255);
 
+    std::cout << "Displaying original image:\n";
+    TG::imshow(image, 0, 255);
+
+    std::vector<std::vector<float>> sobel_x = {
+        {-1,  0,  1},
+        {-2,  0,  2},
+        {-1,  0,  1}
+    };
+
+    auto edge_image = TG::convolve(image, sobel_x, TG::PaddingType::REPLICATE);
+
+
+    std::cout << "Displaying edge-detected image using Sobel-X filter:\n";
+    TG::imshow(edge_image, 0, 255);
+
     std::vector<float> x (50);
     std::vector<float> y (50);
 
