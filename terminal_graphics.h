@@ -544,6 +544,134 @@ namespace TG {
     return output;
   }
 
+  /**
+  * apply run lengh encod algorithm to he image.
+  */
+  template <typename T>
+  std::vector<std::pair<T, int>> run_length_encode(const TG::Image<T>& image) {
+    std::vector<std::pair<T, int>> encoded;
+    int width = image.width();
+    int height = image.height();
+        
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        T pixel = image(x, y);
+        if (!encoded.empty() && encoded.back().first == pixel) {
+          encoded.back().second++;
+        } else {
+          encoded.emplace_back(pixel, 1);
+        }
+      }
+    }
+    return encoded;
+  }
+
+  /**
+  * save the encoded file
+  */
+  template <typename T>
+  void save_encoded_to_file(const std::vector<std::pair<T, int>>& encoded, const std::string& filename) {
+    std::ofstream outFile(filename, std::ios::binary);
+    if (!outFile) {
+      throw std::runtime_error("Failed to open file for writing");
+    }
+    for (const auto& pair : encoded) {
+      outFile.write(reinterpret_cast<const char*>(&pair.first), sizeof(T));
+      outFile.write(reinterpret_cast<const char*>(&pair.second), sizeof(int));
+    }
+    outFile.close();
+  }
+
+  /**
+  * load the encoded file
+  */
+  template <typename T>
+  std::vector<std::pair<T, int>> load_encoded_from_file(const std::string& filename) {
+    std::ifstream inFile(filename, std::ios::binary);
+    if (!inFile) {
+      throw std::runtime_error("Failed to open file for reading");
+    }
+    std::vector<std::pair<T, int>> encoded;
+    T pixel;
+    int count;
+    while (inFile.read(reinterpret_cast<char*>(&pixel), sizeof(T))) {
+      inFile.read(reinterpret_cast<char*>(&count), sizeof(int));
+      encoded.emplace_back(pixel, count);
+    }
+    inFile.close();
+    return encoded;
+  }
+
+  /**
+  * decode the binary image back
+  */
+  template <typename T>
+  TG::Image<T> run_length_decode(const std::vector<std::pair<T, int>>& encoded, int width, int height) {
+    TG::Image<T> image(width, height);
+    int x = 0, y = 0;
+    for (const auto& pair : encoded) {
+      for (int i = 0; i < pair.second; ++i) {
+        if (x >= width) {
+          x = 0;
+          y++;
+        }
+        if (y >= height) break;
+        image(x, y) = pair.first;
+        x++;
+      }
+    }
+    return image;
+  }
+
+  /**
+  * convert cartesian to polar and then apply gaussian 
+  */
+  template <typename T>
+  TG::Image<T> cartesian_to_polar(const TG::Image<T>& image) {
+    int width = image.width();
+    int height = image.height();
+    int radius = std::min(width, height) / 2;
+    TG::Image<T> polar_image(radius, 360);
+    
+    int cx = width / 2;
+    int cy = height / 2;
+    
+    for (int r = 0; r < radius; ++r) {
+      for (int theta = 0; theta < 360; ++theta) {
+        double radian = theta * M_PI / 180.0;
+        int x = cx + static_cast<int>(r * cos(radian));
+        int y = cy + static_cast<int>(r * sin(radian));
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          polar_image(r, theta) = image(x, y);
+        }
+      }
+    }
+    return apply_gaussian_filter(polar_image, 5, 1.0); // Applying Gaussian filter in polar domain
+  }
+
+  /**
+  * convert the polar system back to cartesian system.
+  */
+  template <typename T>
+  TG::Image<T> polar_to_cartesian(const TG::Image<T>& polar_image, int width, int height) {
+    TG::Image<T> cartesian_image(width, height);
+    int cx = width / 2;
+    int cy = height / 2;
+    int radius = polar_image.width();
+    
+    for (int r = 0; r < radius; ++r) {
+      for (int theta = 0; theta < 360; ++theta) {
+        double radian = theta * M_PI / 180.0;
+        int x = cx + static_cast<int>(r * cos(radian));
+        int y = cy + static_cast<int>(r * sin(radian));
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          cartesian_image(x, y) = polar_image(r, theta);
+        }
+      }
+    }
+    return cartesian_image;
+  }
+
   //! Adapter class to magnify an image
   /**
    * This makes the image `factor` bigger than the original.

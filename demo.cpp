@@ -122,6 +122,39 @@ int main (int argc, char* argv[])
     std::cout << "Displaying edge-detected image using Sobel-X filter:\n";
     TG::imshow(edge_image, 0, 255);
 
+    // Run-Length Encoding
+    auto encoded_data = TG::run_length_encode(image);
+    std::cout << "Image encoded using Run-Length Encoding\n";
+    
+    // Save to file
+    const std::string encoded_filename = "encoded_image.rle";
+    TG::save_encoded_to_file(encoded_data, encoded_filename);
+    std::cout << "Encoded data saved to file: " << encoded_filename << "\n";
+    
+    // Load encoded data from file
+    auto loaded_encoded_data = TG::load_encoded_from_file<unsigned char>(encoded_filename);
+    std::cout << "Encoded data loaded from file\n";
+    
+    // Decode the image
+    auto decoded_image = TG::run_length_decode(loaded_encoded_data, image.width(), image.height());
+    std::cout << "Decoded image constructed\n";
+
+    std::cout << "Displaying decoded image:\n";
+    TG::imshow(decoded_image, 0, 255);
+
+    auto polar_image = TG::cartesian_to_polar(image);
+    std::cout << "Image converted to Polar coordinates with Gaussian filtering\n";
+    
+    // Convert back to Cartesian
+    auto reconstructed_image = TG::polar_to_cartesian(polar_image, image.width(), image.height());
+    std::cout << "Image converted back to Cartesian coordinates\n";
+
+    std::cout << "Displaying polar image with Gaussian smoothing:\n";
+    TG::imshow(polar_image, 0, 255);
+    
+    std::cout << "Displaying reconstructed Cartesian image:\n";
+    TG::imshow(reconstructed_image, 0, 255);
+
     std::vector<float> x (50);
     std::vector<float> y (50);
 
